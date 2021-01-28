@@ -13,6 +13,7 @@ import {Inviter, Registerer, RegistererState, SessionState, TransportState, User
 import openNotificationWithIcon from "../components/Notification";
 import DialerMenu from "./DialerMenu";
 import DialerAccount from "./DialerAccount";
+import Timer from "simple-react-timer"
 
 const IncomingModal = ({ isModalVisible, onOk, onCancel, number }) => {
 
@@ -125,13 +126,16 @@ const IncomingCall = props => {
                             <PhoneTwoTone onClick={props.endCall} title="Hangup" twoToneColor="red" />,
                             <AudioMutedOutlined style={{ color: props.isMute ? 'lightcoral' : '' }} onClick={toggleMute} title="Mute" />,
                             <NotificationOutlined style={{ color: props.isHold ? 'lightcoral' : '' }} onClick={toggleHold} title="Hold" />,
-                            <SwapOutlined onClick={() => toggleTransfer('blind')} title="Blind Transfer" />,
+                            <SwapOutlined onClick={() => toggleTransfer('attended')} title="Blind Transfer" />,
                             /*<SwapOutlined onClick={() => toggleTransfer('attended')} title="Attended Transfer" />*/
                         ]}
                         extra={<CloseOutlined onClick={props.endCall} style={{ fontSize: 10 }} />}
                     >
                         <Tag color={props.isConnected ? "success" : "error"}>{props.isConnected ? "connected" : "disconnected"}</Tag>
-                        <Tag>{timer}</Tag>
+                        {/*<Tag>{timer}</Tag>*/}
+                        <Tag>
+                            <Timer startTime={Date.now()} />
+                        </Tag>
                         {props.isHold ? <Tag icon={<NotificationOutlined />} color="#cd201f">
                             Hold
                         </Tag> : ''}
@@ -293,8 +297,9 @@ export default class SIPModule extends Component {
             .catch(error => openNotificationWithIcon(error.message))
     }
 
-    onAttendedTransfer(target) {
-        const transferSession = new Inviter(this.state.userAgent, UserAgent.makeURI(`sip:${target}:${this.state.sipDomain}`))
+    onAttendedTransfer(number) {
+        const target =  UserAgent.makeURI(`sip:${number}@${this.state.sipDomain}`)
+        const transferSession = new Inviter(this.state.userAgent, target)
         let constraints = {
             audio: true,
             video: false

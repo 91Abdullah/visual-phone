@@ -6,20 +6,18 @@ import {
     LeftSquareOutlined,
     PaperClipOutlined,
     PauseCircleOutlined, PhoneFilled, PhoneOutlined, PoweroffOutlined,
-    SettingOutlined, SwapOutlined
+    SettingOutlined, SwapLeftOutlined, SwapOutlined
 } from "@ant-design/icons";
-import {TransferModal} from "./SIPModule";
+import {TransferModal} from "./SIPModule"
+import Timer from "simple-react-timer"
 
 export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
-
-    useEffect(() => {
-        console.log(props)
-    }, [props])
 
     const [dialNumber, setDialNumber] = useState('')
     const [onCall, setOnCall] = useState(false)
     const [timer, setTimer] = useState('00:00')
     const [transferVisible, setTransferVisible] = useState(false)
+    const [transferType, setTransferType] = useState(false)
 
     const { SubMenu } = Menu
 
@@ -64,8 +62,9 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                 onClose={onClose}
                 visible={visible}
             >
-                <div style={{ textAlign: 'right' }}>
-                    <Badge status={props.isConnected ? 'success' : 'error'} text={<b style={{ textDecoration: 'underline', color: props.isConnected ? 'green' : 'red' }}>{props.isConnected ? 'connected' : 'disconnected'}</b>} />
+                <div style={{ marginBottom: 10 }}>
+                    {/*<Badge status={props.isConnected ? 'success' : 'error'} text={<b style={{ textDecoration: 'underline', color: props.isConnected ? 'green' : 'red' }}>{props.isConnected ? 'connected' : 'disconnected'}</b>} />*/}
+                    <Tag color={props.isConnected ? 'green' : 'red'}>{props.isConnected ? 'connected' : 'disconnected'}</Tag>
                 </div>
                 <div
                     style={{
@@ -78,7 +77,7 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                         prefix={<PhoneOutlined />}
                         bordered={false}
                         placeholder="Enter number"
-                        addonAfter={timer}
+                        addonAfter={props.isConnected ? <Timer startTime={Date.now()} /> : timer}
                         value={dialNumber}
                         onChange={e => setDialNumber(e.target.value)}
                     />
@@ -105,19 +104,30 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                             </Button>
                         </Col>
                     </Row>
-                    <Row gutter={[16, 16]}>
-                        <Col span={8}>
-                            <Button danger={props.isHold} onClick={initiateHold} block size="large">
+                    <Row gutter={[6, 16]}>
+                        <Col span={6}>
+                            <Button disabled={!props.isConnected} danger={props.isHold} onClick={initiateHold}>
                                 <PauseCircleOutlined />
                             </Button>
                         </Col>
-                        <Col span={8}>
-                            <Button danger={props.isMute} onClick={initiateMute} block size="large">
+                        <Col span={6}>
+                            <Button disabled={!props.isConnected} danger={props.isMute} onClick={initiateMute}>
                                 <AudioMutedOutlined />
                             </Button>
                         </Col>
-                        <Col span={8}>
-                            <Button onClick={() => props.isConnected ? setTransferVisible(true) : ''} title="Transfer" block size="large">
+                        <Col span={6}>
+                            <Button disabled={!props.isConnected} onClick={() => {
+                                setTransferType('blind')
+                                setTransferVisible(true)
+                            }} title="Blind Transfer">
+                                <SwapLeftOutlined />
+                            </Button>
+                        </Col>
+                        <Col span={6}>
+                            <Button disabled={!props.isConnected} onClick={() => {
+                                setTransferType('attended')
+                                setTransferVisible(true)
+                            }} title="Attended Transfer">
                                 <SwapOutlined />
                             </Button>
                         </Col>
@@ -147,7 +157,7 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                         </Tag>
                     </div>
                     <TransferModal
-                        transferType="blind"
+                        transferType={transferType}
                         visible={transferVisible}
                         onCancel={onTransferCancel}
                         toggleBlindTransfer={props.blindTransfer}
