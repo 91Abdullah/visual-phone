@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {Badge, Button, Card, Col, Divider, Drawer, Input, Menu, Row, Tag, Typography} from "antd";
 import {
-    AudioMutedOutlined,
+    AudioMutedOutlined, ContactsOutlined,
     ContainerOutlined, EditOutlined, EllipsisOutlined,
     LeftSquareOutlined,
     PaperClipOutlined,
@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import {TransferModal} from "./SIPModule"
 import Timer from "simple-react-timer"
+import {SessionState} from "sip.js";
 
 export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
 
@@ -18,6 +19,21 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
     const [timer, setTimer] = useState('00:00')
     const [transferVisible, setTransferVisible] = useState(false)
     const [transferType, setTransferType] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        switch (props.sessionState) {
+            case SessionState.Establishing:
+                setIsLoading(true)
+                break
+            case SessionState.Established:
+                setIsLoading(false)
+                break
+            default:
+                setIsLoading(false)
+                break
+        }
+    }, [props.sessionState])
 
     const { SubMenu } = Menu
 
@@ -30,6 +46,7 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
     }
 
     const onMakeCall = () => {
+        setIsLoading(true)
         makeCall(dialNumber)
     }
 
@@ -119,34 +136,32 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                             <Button disabled={!props.isConnected} onClick={() => {
                                 setTransferType('blind')
                                 setTransferVisible(true)
-                            }} title="Blind Transfer">
-                                <SwapLeftOutlined />
+                            }} title="Transfer">
+                                <SwapOutlined />
                             </Button>
                         </Col>
                         <Col span={6}>
                             <Button disabled={!props.isConnected} onClick={() => {
                                 setTransferType('attended')
                                 setTransferVisible(true)
-                            }} title="Attended Transfer">
-                                <SwapOutlined />
+                            }} title="Conf">
+                                <ContactsOutlined />
                             </Button>
                         </Col>
                     </Row>
                     <Row justify="center" gutter={[16, 16]}>
                         {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(value => (
                             <Col key={value} span={8}>
-                                <Button type="primary" onClick={() => addDigits(value)} block>{value}</Button>
+                                <Button onClick={() => addDigits(value)} block>{value}</Button>
                             </Col>
                         ))}
                     </Row>
                     <Row gutter={[16, 16]}>
                         <Col span={12}>
-                            <Button disabled={props.isConnected} onClick={onMakeCall} block size="large">
-                                <PhoneOutlined />
-                            </Button>
+                            <Button loading={isLoading} disabled={props.isConnected} onClick={onMakeCall} block size="large" icon={<PhoneOutlined />}>Dial</Button>
                         </Col>
                         <Col span={12}>
-                            <Button danger onClick={props.endCall} block size="large">
+                            <Button type="primary" onClick={props.endCall} block size="large">
                                 <PoweroffOutlined />
                             </Button>
                         </Col>

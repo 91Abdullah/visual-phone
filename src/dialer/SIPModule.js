@@ -3,17 +3,18 @@ import {
     AudioMutedOutlined,
     CloseCircleFilled, CloseOutlined,
     CodeOutlined,
-    CodeSandboxOutlined, NotificationOutlined,
+    CodeSandboxOutlined, ContactsOutlined, NotificationOutlined, PauseCircleOutlined,
     PhoneFilled,
     PhoneOutlined, PhoneTwoTone, StopOutlined, SwapLeftOutlined, SwapOutlined,
     UserOutlined
 } from "@ant-design/icons";
-import {Button, Card, Col, Input, Modal, Row, Tag, Typography} from "antd";
+import {Button, Card, Col, Input, Modal, Row, Space, Tag, Typography} from "antd";
 import {Inviter, Registerer, RegistererState, SessionState, TransportState, UserAgent, Web} from "sip.js";
 import openNotificationWithIcon from "../components/Notification";
 import DialerMenu from "./DialerMenu";
 import DialerAccount from "./DialerAccount";
 import Timer from "simple-react-timer"
+import openSuccessNotificationWithIcon from "../components/Message";
 
 const IncomingModal = ({ isModalVisible, onOk, onCancel, number }) => {
 
@@ -68,7 +69,19 @@ export const TransferModal = props => {
             visible={props.visible}
             onCancel={props.onCancel}
         >
-            <Input type="text" value={transferNumber} onChange={e => setTransferNumber(e.target.value)} />
+            <Space direction="horizontal" style={{ width: '100%', justifyContent: 'center' }}>
+                <Input type="text" value={transferNumber} onChange={e => setTransferNumber(e.target.value)} />
+                <Tag>
+                    <Timer startTime={Date.now()} />
+                </Tag>
+                <Tag icon={<PhoneOutlined />} color="#f50">{"disconnected"}</Tag>
+                <Button disabled={!props.isConnected} danger={props.isHold}>
+                    <PauseCircleOutlined />
+                </Button>
+                <Button disabled={!props.isConnected} danger={props.isMute}>
+                    <AudioMutedOutlined />
+                </Button>
+            </Space>
         </Modal>
     )
 }
@@ -126,7 +139,8 @@ const IncomingCall = props => {
                             <PhoneTwoTone onClick={props.endCall} title="Hangup" twoToneColor="red" />,
                             <AudioMutedOutlined style={{ color: props.isMute ? 'lightcoral' : '' }} onClick={toggleMute} title="Mute" />,
                             <NotificationOutlined style={{ color: props.isHold ? 'lightcoral' : '' }} onClick={toggleHold} title="Hold" />,
-                            <SwapOutlined onClick={() => toggleTransfer('attended')} title="Blind Transfer" />,
+                            <SwapOutlined onClick={() => toggleTransfer('blind')} title="Transfer" />,
+                            <ContactsOutlined onClick={() => toggleTransfer('attended')} title="Conf" />,
                             /*<SwapOutlined onClick={() => toggleTransfer('attended')} title="Attended Transfer" />*/
                         ]}
                         extra={<CloseOutlined onClick={props.endCall} style={{ fontSize: 10 }} />}
@@ -168,7 +182,8 @@ export default class SIPModule extends Component {
             authUser: this.props.authUser,
             authPass: this.props.authPass,
             wssPort: this.props.wssPort,
-            uri: UserAgent.makeURI(`sip:${this.props.authUser}@${this.props.sipDomain}:5060`),
+            uri: UserAgent.makeURI(`sip:${this.props.authUser}@${this.props.sipDomain}`),
+            _transferredSession: null,
             _session: null,
             _connected: false,
             _registered: false,
@@ -211,6 +226,10 @@ export default class SIPModule extends Component {
         openNotificationWithIcon(error)
     }
 
+    setNotification(message) {
+        openSuccessNotificationWithIcon(message)
+    }
+
     componentDidMount() {
         this.setState({ userAgent: new UserAgent({
                 authorizationUsername: this.state.authUser,
@@ -249,7 +268,7 @@ export default class SIPModule extends Component {
             sessionDescriptionHandlerModifiers: [Web.holdModifier]
         }
 
-        this.state._session.invite(options).then(() => this.setState({ isHold: true })).catch(err => console.log(err))
+        this.state._session.invite(options).then(() => this.setState({ isHold: true })).catch(err => this.setError(err.message))
     }
 
     onUnhold() {
@@ -257,7 +276,7 @@ export default class SIPModule extends Component {
             sessionDescriptionHandlerModifiers: []
         }
 
-        this.state._session.invite(options).then(() => this.setState({ isHold: false })).catch(err => console.log(err))
+        this.state._session.invite(options).then(() => this.setState({ isHold: false })).catch(err => this.setError(err.message))
     }
 
     onMute() {
@@ -293,8 +312,10 @@ export default class SIPModule extends Component {
             throw new Error("Failed to create transfer target URI.");
         }
         console.log(this.state._session)
-        this.state._session.refer(transferTarget).then(() => console.log('transfered'))
-            .catch(error => openNotificationWithIcon(error.message))
+        this.state._session.refer(transferTarget).then(() => {
+            this.setNotification('Call has been transferred')
+            this.onEndCall()
+        }).catch(error => openNotificationWithIcon(error.message))
     }
 
     onAttendedTransfer(number) {
@@ -310,9 +331,19 @@ export default class SIPModule extends Component {
                 constraints
             }
         }
-        transferSession.invite(options).then(() => {
+
+        // Attended Transfer
+        transferSession.invite(options).then(r => {
+            this.state._session.refer(transferSession)
+            this.setState({ _transferredSession: transferSession })
+        }).catch(err => {
+            this.setError(err.message)
+        })
+        /*transferSession.invite(options).then(() => {
             this.state._session.refer(transferSession).then(() => console.log('transfer attended')).catch(err => console.log('transfer target error'))
-        }).catch(err => console.log(err.message))
+        }).catch(err => console.log(err.message))*/
+        //this.state._session.refer(transferSession).then(r => console.log(r))
+        //this.state._session.refer(transferSession).then(res => console.log('refer')).catch(err => openNotificationWithIcon(err.message))
     }
 
     onConnect() {
@@ -439,7 +470,7 @@ export default class SIPModule extends Component {
             case SessionState.Establishing:
                 if(this.state._session instanceof Inviter) {
                     // An unestablished outgoing session
-                    this.state._session.cancel().then(res => console.log(res))
+                    this.state._session.cancel().then(res => this.setNotification(res))
                 } else {
                     // An unestablished incoming session
                     this.state._session.reject()

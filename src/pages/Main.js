@@ -72,7 +72,7 @@ function Main(props) {
     return(
         <Spin spinning={loading}>
             <Layout className="layout" style={{ minHeight: 600 }}>
-                <Layout.Header style={{ backgroundColor: '#d32f2f' }}>
+                <Layout.Header style={{ backgroundColor: '#02AA31' }}>
                     <img src={logo} alt="HeliPhone Logo" />
                     {loggedin && <div style={{float: 'right'}}>
                         <Button onClick={handleLogout} icon={<LogoutOutlined/>} style={{color: '#fff'}}
