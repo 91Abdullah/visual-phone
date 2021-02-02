@@ -3,7 +3,7 @@ import {
     AudioMutedOutlined,
     CloseCircleFilled, CloseOutlined,
     CodeOutlined,
-    CodeSandboxOutlined, ContactsOutlined, NotificationOutlined, PauseCircleOutlined,
+    CodeSandboxOutlined, ContactsOutlined, GatewayOutlined, NotificationOutlined, PauseCircleOutlined,
     PhoneFilled,
     PhoneOutlined, PhoneTwoTone, StopOutlined, SwapLeftOutlined, SwapOutlined,
     UserOutlined
@@ -95,15 +95,21 @@ export const TransferModal = props => {
                 <Tag>
                     <Timer startTime={Date.now()} />
                 </Tag>
-                <Tag icon={<PhoneOutlined />} color="#f50">{"disconnected"}</Tag>
+                <Tag icon={<PhoneOutlined />} color={props.isConnected ? "green" : "#f50"}>{props.isConnected ? "connected" : "disconnected"}</Tag>
+                <Tag icon={<GatewayOutlined />} color={props.isBridged ? "green" : "#f50"}>{props.isBridged ? "bridged" : "unbridged"}</Tag>
                 <Button onClick={handleHold} disabled={!props.isConnected} danger={props.isHold}>
                     <PauseCircleOutlined />
                 </Button>
                 <Button onClick={handleMute} disabled={!props.isConnected} danger={props.isMute}>
                     <AudioMutedOutlined />
                 </Button>
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <Button onClick={props.onAcceptTransfer} disabled={!props.isConnected}>
                     <PhoneOutlined /> Bridge Call(s)
+                </Button>
+                <Button onClick={props.onTransferHangup} disabled={!props.isConnected} type="primary">
+                    <StopOutlined /> Hangup
                 </Button>
             </div>
         </Modal>
@@ -223,7 +229,8 @@ export default class SIPModule extends Component {
             sessionState: '',
             isTransferHold: false,
             isTransferMute: false,
-            isTransferConnected: false
+            isTransferConnected: false,
+            isBridged: false
         }
 
         this.onEndCall = this.onEndCall.bind(this)
@@ -252,6 +259,7 @@ export default class SIPModule extends Component {
         this.onTransferUnhold = this.onTransferUnhold.bind(this)
         this.onTransferMute = this.onTransferMute.bind(this)
         this.onTransferUnmute = this.onTransferUnmute.bind(this)
+        this.onTransferHangup = this.onTransferHangup.bind(this)
     }
 
     setError(error) {
@@ -392,6 +400,36 @@ export default class SIPModule extends Component {
         }).catch(error => openNotificationWithIcon(error.message))
     }
 
+    onTransferHangup() {
+        if(this.state._transferredSession === null) return
+        switch (this.state._transferredSession.state) {
+            case SessionState.Initial:
+            case SessionState.Establishing:
+                if(this.state._transferredSession instanceof Inviter) {
+                    // An unestablished outgoing session
+                    this.state._transferredSession.cancel().then(res => this.setNotification(res))
+                } else {
+                    // An unestablished incoming session
+                    this.state._transferredSession.reject()
+                }
+                this.setState({ _transferredSession: null })
+                break
+            case SessionState.Established:
+                // An established session
+                this.state._transferredSession.bye().then(res => console.log(res))
+                this.setState({ _transferredSession: null })
+                break
+            case SessionState.Terminating:
+            case SessionState.Terminated:
+                this.state._transferredSession.stateChange.removeListener(this.sessionListener)
+                this.setState({ _transferredSession: null, isTransferMute: false, isTransferHold: false, isTransferConnected: false, isBridged: false })
+                break
+            default:
+                // Cannot terminate a session that is already terminated
+                break
+        }
+    }
+
     onAttendedTransfer(number) {
         // Attended Transfer
         /*transferSession.invite(options).then(r => {
@@ -449,6 +487,9 @@ export default class SIPModule extends Component {
     }
 
     onAcceptTransfer() {
+
+        // Bridging all calls
+
         const receivedTracks = []
         const sessionA = this.state._session
         const sessionB = this.state._transferredSession
@@ -482,7 +523,12 @@ export default class SIPModule extends Component {
                 sourceStream.connect(mixedOutput)
             })
 
-            session.sessionDescriptionHandler.peerConnection.getSenders()[0].replaceTrack(mixedOutput.stream.getTracks()[0]).then(r => console.log('track replaced')).catch(e => console.log(`error: ${e}`))
+            session.sessionDescriptionHandler.peerConnection.getSenders()[0].replaceTrack(mixedOutput.stream.getTracks()[0])
+                .then(r => {
+                    this.setState({ isBridged: true })
+                    console.log('track replaced')
+                })
+                .catch(e => console.log(`error: ${e}`))
         })
 
         this.mediaElement.current.srcObject = mediaStream
@@ -858,6 +904,8 @@ export default class SIPModule extends Component {
                     onTransferUnhold={this.onTransferUnhold}
                     onTransferHold={this.onTransferHold}
                     isTransferConnected={this.state.isTransferConnected}
+                    onTransferHangup={this.onTransferHangup}
+                    isBridged={this.state.isBridged}
                 />
                 <DialerAccount {...this.props} onClose={this.props.onDialerAccountClose} visible={this.props.dialerAccountVisible} />
             </>
