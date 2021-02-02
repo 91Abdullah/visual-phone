@@ -177,6 +177,14 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                         onCancel={onTransferCancel}
                         toggleBlindTransfer={props.blindTransfer}
                         toggleAttendedTransfer={props.attendedTransfer}
+                        onAcceptTransfer={props.onAcceptTransfer}
+                        isConnected={props.isTransferConnected}
+                        isHold={props.isTransferHold}
+                        isMute={props.isTransferMute}
+                        onHold={props.onTransferHold}
+                        onUnhold={props.onTransferUnhold}
+                        onMute={props.onTransferMute}
+                        onUnmute={props.onTransferUnmute}
                     />
                 </div>
             </Drawer>

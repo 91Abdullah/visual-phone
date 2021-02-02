@@ -8,13 +8,14 @@ import {
     PhoneOutlined, PhoneTwoTone, StopOutlined, SwapLeftOutlined, SwapOutlined,
     UserOutlined
 } from "@ant-design/icons";
-import {Button, Card, Col, Input, Modal, Row, Space, Tag, Typography} from "antd";
+import {Button, Card, Col, Divider, Input, Modal, Row, Space, Tag, Typography} from "antd";
 import {Inviter, Registerer, RegistererState, SessionState, TransportState, UserAgent, Web} from "sip.js";
 import openNotificationWithIcon from "../components/Notification";
 import DialerMenu from "./DialerMenu";
 import DialerAccount from "./DialerAccount";
 import Timer from "simple-react-timer"
-import openSuccessNotificationWithIcon from "../components/Message";
+import openSuccessNotificationWithIcon from "../components/Message"
+import MultiStreamsMixer from "multistreamsmixer"
 
 const IncomingModal = ({ isModalVisible, onOk, onCancel, number }) => {
 
@@ -52,6 +53,10 @@ const IncomingModal = ({ isModalVisible, onOk, onCancel, number }) => {
 
 export const TransferModal = props => {
 
+    useEffect(() => {
+        console.log(props)
+    }, [props])
+
     const [transferNumber, setTransferNumber] = useState()
 
     const initiateTransfer = () => {
@@ -60,28 +65,47 @@ export const TransferModal = props => {
         else props.toggleAttendedTransfer(transferNumber)
     }
 
+    const handleHold = () => {
+        if(props.isHold) {
+            props.onUnhold()
+        } else {
+            props.onHold()
+        }
+    }
+
+    const handleMute = () => {
+        if(props.isMute) {
+            props.onUnmute()
+        } else {
+            props.onMute()
+        }
+    }
+
     return(
         <Modal
-            title={`Initiate Transfer: ${props.transferType}`}
+            title={props.transferType === "blind" ? "Transfer Call" : "Conference"}
             centered
-            okText="Transfer"
+            okText="Dial"
             onOk={initiateTransfer}
             visible={props.visible}
             onCancel={props.onCancel}
         >
-            <Space direction="horizontal" style={{ width: '100%', justifyContent: 'center' }}>
-                <Input type="text" value={transferNumber} onChange={e => setTransferNumber(e.target.value)} />
+            <Input type="text" value={transferNumber} onChange={e => setTransferNumber(e.target.value)} />
+            <div style={{ textAlign: 'center', marginTop: 10 }}>
                 <Tag>
                     <Timer startTime={Date.now()} />
                 </Tag>
                 <Tag icon={<PhoneOutlined />} color="#f50">{"disconnected"}</Tag>
-                <Button disabled={!props.isConnected} danger={props.isHold}>
+                <Button onClick={handleHold} disabled={!props.isConnected} danger={props.isHold}>
                     <PauseCircleOutlined />
                 </Button>
-                <Button disabled={!props.isConnected} danger={props.isMute}>
+                <Button onClick={handleMute} disabled={!props.isConnected} danger={props.isMute}>
                     <AudioMutedOutlined />
                 </Button>
-            </Space>
+                <Button onClick={props.onAcceptTransfer} disabled={!props.isConnected}>
+                    <PhoneOutlined /> Bridge Call(s)
+                </Button>
+            </div>
         </Modal>
     )
 }
@@ -196,7 +220,10 @@ export default class SIPModule extends Component {
             isConnected: false,
             isHold: false,
             isMute: false,
-            sessionState: ''
+            sessionState: '',
+            isTransferHold: false,
+            isTransferMute: false,
+            isTransferConnected: false
         }
 
         this.onEndCall = this.onEndCall.bind(this)
@@ -220,6 +247,11 @@ export default class SIPModule extends Component {
         this.onUnmute = this.onUnmute.bind(this)
         this.onAttendedTransfer = this.onAttendedTransfer.bind(this)
         this.onBlindTransfer = this.onBlindTransfer.bind(this)
+        this.onAcceptTransfer = this.onAcceptTransfer.bind(this)
+        this.onTransferHold = this.onTransferHold.bind(this)
+        this.onTransferUnhold = this.onTransferUnhold.bind(this)
+        this.onTransferMute = this.onTransferMute.bind(this)
+        this.onTransferUnmute = this.onTransferUnmute.bind(this)
     }
 
     setError(error) {
@@ -261,6 +293,48 @@ export default class SIPModule extends Component {
         this.setState({ dialedNumber: invitation.remoteIdentity.uri.user })
         this.setState({ incoming: true })
         //invitation.stateChange.addListener(this.sessionListener)
+    }
+
+    onTransferHold() {
+        const options = {
+            sessionDescriptionHandlerModifiers: [Web.holdModifier]
+        }
+
+        this.state._transferredSession.invite(options).then(() => this.setState({ isTransferHold: true })).catch(err => this.setError(err.message))
+    }
+
+    onTransferUnhold() {
+        const options = {
+            sessionDescriptionHandlerModifiers: []
+        }
+
+        this.state._transferredSession.invite(options).then(() => this.setState({ isTransferHold: false })).catch(err => this.setError(err.message))
+    }
+
+    onTransferMute() {
+        let pc = this.state._transferredSession.sessionDescriptionHandler.peerConnection
+        let senders = pc.getSenders()
+        if(senders.length) {
+            senders.forEach(sender => {
+                if(sender.track) {
+                    sender.track.enabled = false
+                    this.setState({ isTransferMute: true })
+                }
+            })
+        }
+    }
+
+    onTransferUnmute() {
+        let pc = this.state._transferredSession.sessionDescriptionHandler.peerConnection
+        let senders = pc.getSenders()
+        if(senders.length) {
+            senders.forEach(sender => {
+                if(sender.track) {
+                    sender.track.enabled = true
+                    this.setState({ isTransferMute: false })
+                }
+            })
+        }
     }
 
     onHold() {
@@ -319,7 +393,17 @@ export default class SIPModule extends Component {
     }
 
     onAttendedTransfer(number) {
+        // Attended Transfer
+        /*transferSession.invite(options).then(r => {
+            this.state._session.refer(transferSession)
+            this.setState({ _transferredSession: transferSession })
+        }).catch(err => {
+            this.setError(err.message)
+        })*/
+
+        // Attended transfer through aftab project
         const target =  UserAgent.makeURI(`sip:${number}@${this.state.sipDomain}`)
+
         const transferSession = new Inviter(this.state.userAgent, target)
         let constraints = {
             audio: true,
@@ -332,19 +416,199 @@ export default class SIPModule extends Component {
             }
         }
 
-        // Attended Transfer
-        transferSession.invite(options).then(r => {
-            this.state._session.refer(transferSession)
-            this.setState({ _transferredSession: transferSession })
-        }).catch(err => {
-            this.setError(err.message)
+        transferSession.stateChange.addListener(state => {
+            switch (state) {
+                case SessionState.Initial:
+                    break
+                case SessionState.Establishing:
+                    break
+                case SessionState.Established:
+                    this.setState({ isTransferConnected: true })
+                    const remoteStream = new MediaStream()
+                    transferSession.sessionDescriptionHandler.peerConnection.getReceivers().forEach(receiver => {
+                        if(receiver.track) {
+                            remoteStream.addTrack(receiver.track)
+                        }
+                    })
+                    this.mediaElement.current.srcObject = remoteStream
+                    this.mediaElement.current.play()
+                    break
+                case SessionState.Terminating:
+                case SessionState.Terminated:
+                    this.setState({ isTransferConnected: false, _transferSession: null })
+                    this.mediaElement.current.srcObject = null
+                    this.mediaElement.current.pause()
+                    break
+                default:
+                    throw new Error("Unknown session state.")
+            }
         })
-        /*transferSession.invite(options).then(() => {
-            this.state._session.refer(transferSession).then(() => console.log('transfer attended')).catch(err => console.log('transfer target error'))
-        }).catch(err => console.log(err.message))*/
-        //this.state._session.refer(transferSession).then(r => console.log(r))
-        //this.state._session.refer(transferSession).then(res => console.log('refer')).catch(err => openNotificationWithIcon(err.message))
+
+        transferSession.invite(options).then(r => console.log(r)).catch(e => console.log(e))
+        this.setState({ _transferredSession: transferSession })
     }
+
+    onAcceptTransfer() {
+        const receivedTracks = []
+        const sessionA = this.state._session
+        const sessionB = this.state._transferredSession
+
+        sessionA.sessionDescriptionHandler.peerConnection.getReceivers().forEach(receiver => {
+            receivedTracks.push(receiver.track)
+        })
+
+        sessionB.sessionDescriptionHandler.peerConnection.getReceivers().forEach(receiver => {
+            receivedTracks.push(receiver.track)
+        })
+
+        const context = new AudioContext()
+        const mediaStream = new MediaStream()
+
+        const sessions = [sessionA, sessionB]
+        sessions.forEach(session => {
+            const mixedOutput = context.createMediaStreamDestination()
+            session.sessionDescriptionHandler.peerConnection.getReceivers().forEach(receiver => {
+                receivedTracks.forEach(track => {
+                    mediaStream.addTrack(receiver.track)
+                    if(receiver.track.id !== track.id) {
+                        const sourceStream = context.createMediaStreamSource(new MediaStream([track]))
+                        sourceStream.connect(mixedOutput)
+                    }
+                })
+            })
+
+            session.sessionDescriptionHandler.peerConnection.getSenders().forEach(sender => {
+                const sourceStream = context.createMediaStreamSource(new MediaStream([sender.track]))
+                sourceStream.connect(mixedOutput)
+            })
+
+            session.sessionDescriptionHandler.peerConnection.getSenders()[0].replaceTrack(mixedOutput.stream.getTracks()[0]).then(r => console.log('track replaced')).catch(e => console.log(`error: ${e}`))
+        })
+
+        this.mediaElement.current.srcObject = mediaStream
+        this.mediaElement.current.play()
+    }
+
+    //function to create conference by mixing audio
+    //sessions => array with JsSIP.RTCSessions calls
+    //remoteAudioId => the ID of your <audio> element to play the received streams
+   conference(sessions, remoteAudioId) {
+        //take all received tracks from the sessions you want to merge
+        var receivedTracks = [];
+        sessions.forEach(function(session) {
+            if(session !== null && session !== undefined) {
+                session.connection.getReceivers().forEach(function(receiver) {
+                    receivedTracks.push(receiver.track);
+                });
+            }
+        });
+
+        //use the Web Audio API to mix the received tracks
+        var context = new AudioContext();
+        var allReceivedMediaStreams = new MediaStream();
+
+        sessions.forEach(function(session) {
+            if(session !== null && session !== undefined) {
+
+                var mixedOutput = context.createMediaStreamDestination();
+
+                session.connection.getReceivers().forEach(function(receiver) {
+                    receivedTracks.forEach(function(track) {
+                        allReceivedMediaStreams.addTrack(receiver.track);
+                        if(receiver.track.id !== track.id) {
+                            var sourceStream = context.createMediaStreamSource(new MediaStream([track]));
+                            sourceStream.connect(mixedOutput);
+                        }
+                    });
+                });
+                //mixing your voice with all the received audio
+                session.connection.getSenders().forEach(function(sender) {
+                    var sourceStream = context.createMediaStreamSource(new MediaStream([sender.track]));
+                    sourceStream.connect(mixedOutput);
+                });
+                session.connection.getSenders()[0].replaceTrack(mixedOutput.stream.getTracks()[0]);
+            }
+        });
+
+        //play all received stream to you
+        var remoteAudio = document.getElementById('remoteAudioId');
+        remoteAudio.srcObject = allReceivedMediaStreams;
+        var promiseRemote = remoteAudio.play();
+        if(promiseRemote !== undefined) {
+            promiseRemote.then(_ => {
+                console.log("playing all received streams to you");
+            }).catch(error => {
+                console.log(error);
+            });
+        }
+    }
+
+    /*onAcceptTransfer() {
+        if(this.state._transferredSession) {
+            console.log('this is transfer')
+            const remoteStream = new MediaStream()
+            this.state._session.sessionDescriptionHandler.peerConnection.getReceivers().forEach(receiver => {
+                if(receiver.track) {
+                    remoteStream.addTrack(receiver.track)
+                }
+            })
+            this.state._transferredSession.sessionDescriptionHandler.peerConnection.getReceivers().forEach(receiver => {
+                if(receiver.track) {
+                    remoteStream.addTrack(receiver.track)
+                }
+            })
+
+        }
+    }*/
+
+    //function to create conference by mixing audio
+    //sessions => array with JsSIP.RTCSessions calls
+    //remoteAudioId => the ID of your <audio> element to play the received streams
+    /*onAcceptTransfer() {
+        //take all received tracks from the sessions you want to merge
+        const sessions = [this.state._session, this.state._transferredSession]
+        let receivedTracks = [];
+        sessions.forEach(function(session) {
+            if(session !== null && session !== undefined) {
+                session.sessionDescriptionHandler.peerConnection.getReceivers().forEach(function(receiver) {
+                    receivedTracks.push(receiver.track);
+                });
+            }
+        })
+
+        console.log(receivedTracks)
+
+        //use the Web Audio API to mix the received tracks
+        let context = new AudioContext();
+        let allReceivedMediaStreams = new MediaStream();
+
+        sessions.forEach(function(session) {
+            if(session !== null && session !== undefined) {
+
+                let mixedOutput = context.createMediaStreamDestination();
+
+                session.sessionDescriptionHandler.peerConnection.getReceivers().forEach(function(receiver) {
+                    receivedTracks.forEach(function(track) {
+                        allReceivedMediaStreams.addTrack(receiver.track);
+                        if(receiver.track.id !== track.id) {
+                            let sourceStream = context.createMediaStreamSource(new MediaStream([track]));
+                            sourceStream.connect(mixedOutput);
+                        }
+                    });
+                });
+                //mixing your voice with all the received audio
+                session.sessionDescriptionHandler.peerConnection.getSenders().forEach(function(sender) {
+                    let sourceStream = context.createMediaStreamSource(new MediaStream([sender.track]));
+                    sourceStream.connect(mixedOutput);
+                });
+                session.sessionDescriptionHandler.peerConnection.getSenders()[0].replaceTrack(mixedOutput.stream.getTracks()[0]);
+            }
+        });
+
+        //play all received stream to you
+        this.mediaElement.current.srcObject = allReceivedMediaStreams
+        this.mediaElement.current.play()
+    }*/
 
     onConnect() {
         this.setState({ _connected: true })
@@ -585,7 +849,15 @@ export default class SIPModule extends Component {
                     isConnected={this.state.isConnected}
                     blindTransfer={this.onBlindTransfer}
                     attendedTransfer={this.onAttendedTransfer}
+                    onAcceptTransfer={this.onAcceptTransfer}
                     sessionState={this.state.sessionState}
+                    isTransferMute={this.state.isTransferMute}
+                    isTransferHold={this.state.isTransferHold}
+                    onTransferMute={this.onTransferMute}
+                    onTransferUnmute={this.onTransferUnmute}
+                    onTransferUnhold={this.onTransferUnhold}
+                    onTransferHold={this.onTransferHold}
+                    isTransferConnected={this.state.isTransferConnected}
                 />
                 <DialerAccount {...this.props} onClose={this.props.onDialerAccountClose} visible={this.props.dialerAccountVisible} />
             </>
