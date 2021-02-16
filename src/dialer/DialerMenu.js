@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {Badge, Button, Card, Col, Divider, Drawer, Input, Menu, Row, Tag, Typography} from "antd";
 import {
     AudioMutedOutlined, ContactsOutlined,
@@ -9,17 +9,26 @@ import {
     SettingOutlined, SwapLeftOutlined, SwapOutlined
 } from "@ant-design/icons";
 import {TransferModal} from "./SIPModule"
-import Timer from "simple-react-timer"
+import Timer from "react-compound-timer"
 import {SessionState} from "sip.js";
 
 export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
 
     const [dialNumber, setDialNumber] = useState('')
-    const [onCall, setOnCall] = useState(false)
-    const [timer, setTimer] = useState('00:00')
+    const [timer] = useState('00:00')
     const [transferVisible, setTransferVisible] = useState(false)
     const [transferType, setTransferType] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
+
+    const timerRef = useRef()
+
+    useEffect(() => {
+        if(props.isConnected) {
+            timerRef.current.start()
+        } else {
+            timerRef.current?.reset()
+        }
+    }, [props.isConnected])
 
     useEffect(() => {
         switch (props.sessionState) {
@@ -34,8 +43,6 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                 break
         }
     }, [props.sessionState])
-
-    const { SubMenu } = Menu
 
     const addDigits = (digit) => {
         setDialNumber(dialNumber => dialNumber + digit)
@@ -94,7 +101,13 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                         prefix={<PhoneOutlined />}
                         bordered={false}
                         placeholder="Enter number"
-                        addonAfter={props.isConnected ? <Timer startTime={Date.now()} /> : timer}
+                        addonAfter={props.isConnected ? <Timer ref={timerRef} startImmediately={false} formatValue={(value) => `${(value < 10 ? `0${value}` : value)}`}>
+                            {({ start, resume, pause, stop, reset, timerState }) => (
+                                <>
+                                    <Timer.Minutes />:<Timer.Seconds />
+                                </>
+                            )}
+                        </Timer> : timer}
                         value={dialNumber}
                         onChange={e => setDialNumber(e.target.value)}
                     />

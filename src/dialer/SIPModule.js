@@ -1,4 +1,4 @@
-import React, {Component, createRef, useState, useEffect} from "react"
+import React, { Component, createRef, useState, useEffect, useRef } from "react"
 import {
     AudioMutedOutlined,
     CloseCircleFilled, CloseOutlined,
@@ -13,7 +13,8 @@ import {Inviter, Registerer, RegistererState, SessionState, TransportState, User
 import openNotificationWithIcon from "../components/Notification";
 import DialerMenu from "./DialerMenu";
 import DialerAccount from "./DialerAccount";
-import Timer from "simple-react-timer"
+//import Timer from "simple-react-timer"
+import Timer from "react-compound-timer"
 import openSuccessNotificationWithIcon from "../components/Message"
 import ring from "../ring.mp3"
 
@@ -52,10 +53,6 @@ const IncomingModal = ({ isModalVisible, onOk, onCancel, number }) => {
 }
 
 export const TransferModal = props => {
-
-    useEffect(() => {
-        console.log(props)
-    }, [props])
 
     const [transferNumber, setTransferNumber] = useState()
 
@@ -122,6 +119,8 @@ const IncomingCall = props => {
     const [transferType, setTransferType] = useState('')
     const [visible, setVisible] = useState(false)
 
+    const timerRef = useRef()
+
     const title = (
         <>
             <PhoneOutlined /> {props.number}
@@ -157,6 +156,14 @@ const IncomingCall = props => {
         setTransferType('')
     }
 
+    useEffect(() => {
+        const current = timerRef.current
+        if(props.isConnected && props.incoming) {
+            current.start()
+        }
+        return () => current?.reset()
+    }, [props.isConnected])
+
     if(props.incoming && props.isConnected) {
         return(
             <Row style={{ marginTop: 10 }}>
@@ -178,7 +185,20 @@ const IncomingCall = props => {
                         <Tag color={props.isConnected ? "success" : "error"}>{props.isConnected ? "connected" : "disconnected"}</Tag>
                         {/*<Tag>{timer}</Tag>*/}
                         <Tag>
-                            <Timer startTime={Date.now()} />
+                            {/*<Timer startTime={!!props.isConnected} />*/}
+                            <Timer
+                                ref={timerRef}
+                                startImmediately={false}
+                                formatValue={value => `${(value < 10 ? `0${value}` : value)}`}
+                            >
+                                {({ start, resume, pause, stop, reset, timerState }) => (
+                                    <>
+                                        <div>
+                                            <Timer.Hours />:<Timer.Minutes />:<Timer.Seconds />
+                                        </div>
+                                    </>
+                                )}
+                            </Timer>
                         </Tag>
                         {props.isHold ? <Tag icon={<NotificationOutlined />} color="#cd201f">
                             Hold
@@ -204,9 +224,6 @@ export default class SIPModule extends Component {
     constructor(props) {
         super(props)
 
-        this.mediaElement = createRef()
-        this.audioElement = createRef()
-
         this.state = {
             sipDomain: this.props.sipDomain,
             name: this.props.name,
@@ -231,8 +248,7 @@ export default class SIPModule extends Component {
             isTransferHold: false,
             isTransferMute: false,
             isTransferConnected: false,
-            isBridged: false,
-            ringElement: new Audio(ring)
+            isBridged: false
         }
 
         this.onEndCall = this.onEndCall.bind(this)
@@ -274,7 +290,7 @@ export default class SIPModule extends Component {
         openSuccessNotificationWithIcon(message)
     }
 
-    componentDidMount() {
+    componentWillMount() {
         this.setState({ userAgent: new UserAgent({
                 authorizationUsername: this.state.authUser,
                 authorizationPassword: this.state.authPass,
@@ -292,6 +308,12 @@ export default class SIPModule extends Component {
             })}, () => {
             this.setState({ registerer: new Registerer(this.state.userAgent)})
         })
+        this.mediaElement = createRef()
+        this.audioElement = createRef()
+    }
+
+    componentDidMount() {
+
     }
 
     componentWillUnmount() {
@@ -309,9 +331,10 @@ export default class SIPModule extends Component {
     }
 
     onInvite(invitation) {
-        console.log('incoming call')
         this.playRinger()
-        this.setState({ _session: invitation, isModalVisible: true })
+        this.setState({ _session: invitation, isModalVisible: true }, () => {
+            this.registerEvents()
+        })
         this.setState({ dialedNumber: invitation.remoteIdentity.uri.user })
         this.setState({ incoming: true })
         //invitation.stateChange.addListener(this.sessionListener)
@@ -402,12 +425,10 @@ export default class SIPModule extends Component {
     }
 
     onBlindTransfer(target) {
-        console.log(target, this.state.sipDomain)
         const transferTarget = UserAgent.makeURI(`sip:${target}@${this.state.sipDomain}`)
         if (!transferTarget) {
             throw new Error("Failed to create transfer target URI.");
         }
-        console.log(this.state._session)
         this.state._session.refer(transferTarget).then(() => {
             this.setNotification('Call has been transferred')
             this.onEndCall()
@@ -430,7 +451,7 @@ export default class SIPModule extends Component {
                 break
             case SessionState.Established:
                 // An established session
-                this.state._transferredSession.bye().then(res => console.log(res))
+                this.state._transferredSession.bye()
                 this.setState({ _transferredSession: null })
                 break
             case SessionState.Terminating:
@@ -496,7 +517,7 @@ export default class SIPModule extends Component {
             }
         })
 
-        transferSession.invite(options).then(r => console.log(r)).catch(e => console.log(e))
+        transferSession.invite(options).catch(e => console.log(e))
         this.setState({ _transferredSession: transferSession })
     }
 
@@ -692,15 +713,16 @@ export default class SIPModule extends Component {
             case SessionState.Establishing:
                 break
             case SessionState.Established:
+                this.stopRing()
                 this.attachMedia()
                 this.setState({ isConnected: true })
-                this.stopRing()
+                //this.setState({ _session: null, isModalVisible: false })
                 break
             case SessionState.Terminating:
             case SessionState.Terminated:
+                this.stopRing()
                 this.cleanupMedia()
-                this.setState({ incoming: false })
-                this.setState({ isConnected: false })
+                this.setState({ incoming: false, isConnected: false, _session: null, isModalVisible: false })
                 break
             default:
                 throw new Error("Unknown session state.")
@@ -789,6 +811,7 @@ export default class SIPModule extends Component {
     }
 
     onEndCall() {
+        this.stopRing()
         if(this.state._session === null) return
         switch (this.state._session.state) {
             case SessionState.Initial:
@@ -806,13 +829,11 @@ export default class SIPModule extends Component {
                 // An established session
                 this.state._session.bye().then(res => console.log(res))
                 this.setState({ _session: null, isModalVisible: false })
-                this.stopRing()
                 break
             case SessionState.Terminating:
             case SessionState.Terminated:
                 this.state._session.stateChange.removeListener(this.sessionListener)
                 this.setState({ _session: null, isModalVisible: false, isMute: false, isHold: false })
-                this.stopRing()
                 break
             default:
                 // Cannot terminate a session that is already terminated
@@ -833,7 +854,7 @@ export default class SIPModule extends Component {
         }
 
         this.state._session.accept(options).then(res => console.log(res))
-        this.registerEvents()
+        //this.registerEvents()
         this.setState({ isModalVisible: false })
     }
 

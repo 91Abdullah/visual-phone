@@ -12,6 +12,7 @@
     "axios": "^0.21.1",
     "craco-less": "^1.17.1",
     "react": "^17.0.1",
+    "react-compound-timer": "^1.2.0",
     "react-dom": "^17.0.1",
     "react-query": "^3.5.16",
     "react-router-dom": "^5.2.0",
