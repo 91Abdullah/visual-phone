@@ -15,7 +15,7 @@ import DialerMenu from "./DialerMenu";
 import DialerAccount from "./DialerAccount";
 import Timer from "simple-react-timer"
 import openSuccessNotificationWithIcon from "../components/Message"
-import MultiStreamsMixer from "multistreamsmixer"
+import ring from "../ring.mp3"
 
 const IncomingModal = ({ isModalVisible, onOk, onCancel, number }) => {
 
@@ -205,6 +205,7 @@ export default class SIPModule extends Component {
         super(props)
 
         this.mediaElement = createRef()
+        this.audioElement = createRef()
 
         this.state = {
             sipDomain: this.props.sipDomain,
@@ -230,7 +231,8 @@ export default class SIPModule extends Component {
             isTransferHold: false,
             isTransferMute: false,
             isTransferConnected: false,
-            isBridged: false
+            isBridged: false,
+            ringElement: new Audio(ring)
         }
 
         this.onEndCall = this.onEndCall.bind(this)
@@ -260,6 +262,8 @@ export default class SIPModule extends Component {
         this.onTransferMute = this.onTransferMute.bind(this)
         this.onTransferUnmute = this.onTransferUnmute.bind(this)
         this.onTransferHangup = this.onTransferHangup.bind(this)
+        this.playRinger = this.playRinger.bind(this)
+        this.stopRing = this.stopRing.bind(this)
     }
 
     setError(error) {
@@ -295,8 +299,18 @@ export default class SIPModule extends Component {
         this.state._session?.stateChange.removeListener(this.sessionListener)
     }
 
+    playRinger() {
+        this.audioElement.current.play()
+    }
+
+    stopRing() {
+        this.audioElement.current.pause()
+        this.audioElement.current.currentTime = 0
+    }
+
     onInvite(invitation) {
         console.log('incoming call')
+        this.playRinger()
         this.setState({ _session: invitation, isModalVisible: true })
         this.setState({ dialedNumber: invitation.remoteIdentity.uri.user })
         this.setState({ incoming: true })
@@ -680,6 +694,7 @@ export default class SIPModule extends Component {
             case SessionState.Established:
                 this.attachMedia()
                 this.setState({ isConnected: true })
+                this.stopRing()
                 break
             case SessionState.Terminating:
             case SessionState.Terminated:
@@ -791,11 +806,13 @@ export default class SIPModule extends Component {
                 // An established session
                 this.state._session.bye().then(res => console.log(res))
                 this.setState({ _session: null, isModalVisible: false })
+                this.stopRing()
                 break
             case SessionState.Terminating:
             case SessionState.Terminated:
                 this.state._session.stateChange.removeListener(this.sessionListener)
                 this.setState({ _session: null, isModalVisible: false, isMute: false, isHold: false })
+                this.stopRing()
                 break
             default:
                 // Cannot terminate a session that is already terminated
@@ -859,6 +876,7 @@ export default class SIPModule extends Component {
                         {!this.state._registered ? <Typography.Title level={4}>Click on this <CodeOutlined/> icon to register your phone.</Typography.Title> : <Typography.Title level={4}>Your phone is <span style={{ color: 'green', textDecoration: 'underline' }}>registered</span>. Click on this <StopOutlined /> icon to unregister your phone.</Typography.Title>}
                     </Typography>
                     <audio ref={this.mediaElement} />
+                    <audio ref={this.audioElement} src={ring} loop={true} />
                 </Card>
                 <IncomingCall
                     isHold={this.state.isHold}
