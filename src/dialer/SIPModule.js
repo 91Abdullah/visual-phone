@@ -1,11 +1,22 @@
 import React, { Component, createRef, useState, useEffect, useRef } from "react"
 import {
     AudioMutedOutlined,
-    CloseCircleFilled, CloseOutlined,
+    CloseCircleFilled,
+    CloseOutlined,
+    ClusterOutlined,
     CodeOutlined,
-    CodeSandboxOutlined, ContactsOutlined, GatewayOutlined, NotificationOutlined, PauseCircleOutlined,
+    CodeSandboxOutlined,
+    ContactsOutlined,
+    DeliveredProcedureOutlined,
+    GatewayOutlined,
+    NotificationOutlined,
+    PauseCircleOutlined,
     PhoneFilled,
-    PhoneOutlined, PhoneTwoTone, StopOutlined, SwapLeftOutlined, SwapOutlined,
+    PhoneOutlined,
+    PhoneTwoTone,
+    StopOutlined,
+    SwapLeftOutlined,
+    SwapOutlined,
     UserOutlined
 } from "@ant-design/icons";
 import {Button, Card, Col, Divider, Input, Modal, Row, Space, Tag, Typography} from "antd";
@@ -230,6 +241,7 @@ export default class SIPModule extends Component {
             authUser: this.props.authUser,
             authPass: this.props.authPass,
             wssPort: this.props.wssPort,
+            queues: this.props.queues,
             uri: UserAgent.makeURI(`sip:${this.props.authUser}@${this.props.sipDomain}`),
             _transferredSession: null,
             _session: null,
@@ -894,7 +906,13 @@ export default class SIPModule extends Component {
                 <Card title={cardHeader} size="small">
                     <Typography style={{ textAlign: 'center' }}>
                         <Typography.Title level={4}>Welcome {this.state.name}!</Typography.Title>
-                        {!this.state._registered ? <Typography.Title level={4}>Click on this <CodeOutlined/> icon to register your phone.</Typography.Title> : <Typography.Title level={4}>Your phone is <span style={{ color: 'green', textDecoration: 'underline' }}>registered</span>. Click on this <StopOutlined /> icon to unregister your phone.</Typography.Title>}
+                        {
+                            !this.state._registered ?
+                            <Typography.Title level={4}>Click on <CodeOutlined/> icon to register your phone.</Typography.Title> : <>
+                                    <Typography.Title level={4}>Your phone is <span style={{ color: 'green', textDecoration: 'underline' }}>registered</span>. Click on this <StopOutlined /> icon to unregister your phone.</Typography.Title>
+                                    <Typography.Title level={4}>Click on <ClusterOutlined /> icon to login into queue(s) <span style={{ color: 'green', textDecoration: 'underline' }}>[{this.state.queues}]</span> and click on <DeliveredProcedureOutlined /> to logout.</Typography.Title>
+                                </>
+                        }
                     </Typography>
                     <audio ref={this.mediaElement} />
                     <audio ref={this.audioElement} src={ring} loop={true} />

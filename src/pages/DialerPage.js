@@ -1,17 +1,19 @@
 import React from "react"
 import {useQuery} from "react-query";
-import {fetchDomain, fetchUser} from "../config/queries";
+import {fetchDomain, fetchQueue, fetchUser} from "../config/queries";
 import {Button, Col, Result, Row, Skeleton, Spin} from "antd";
 import {LogoutOutlined} from "@ant-design/icons";
 import SIPConfig from "../classes/SIPConfig";
 import SIPModule from "../dialer/SIPModule";
 import DialerLayout from "../dialer/DialerLayout";
-import DialerMenu from "../dialer/DialerMenu";
+import DialerMenu from "../dialer/DialerMenu"
+import { useEffect } from "react"
 
 const DialerPage = () => {
 
     const domainQuery = useQuery('fetchDomain', fetchDomain)
     const userQuery = useQuery('fetchUser', fetchUser)
+    const queueQuery = useQuery('fetchQueue', fetchQueue)
 
     if(userQuery.isSuccess && userQuery.data.type === "Normal") {
         return (
@@ -46,7 +48,7 @@ const DialerPage = () => {
         return (
             <Row justify="center">
                 <Col span={20}>
-                    <Skeleton avatar paragraph={{ rows: 10 }} active />
+                    <Skeleton paragraph={{ rows: 10 }} active />
                 </Col>
             </Row>
         )
@@ -58,6 +60,7 @@ const DialerPage = () => {
                 authUser={userQuery.data.auth_username}
                 authPass={userQuery.data.auth_password}
                 wssPort={domainQuery.data.wss_port}
+                queues={queueQuery.data}
             />
         </Spin>
     )
