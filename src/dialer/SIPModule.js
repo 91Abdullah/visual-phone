@@ -132,6 +132,21 @@ const IncomingCall = props => {
 
     const timerRef = useRef()
 
+    useEffect(() => {
+        switch (visible) {
+            case true:
+                if(props.isConnected)
+                    props.holdCall()
+                break
+            case false:
+                if(props.isConnected)
+                    props.unholdCall()
+                break
+            default:
+                break
+        }
+    }, [visible])
+
     const title = (
         <>
             <PhoneOutlined /> {props.number}

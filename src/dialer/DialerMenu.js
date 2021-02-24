@@ -23,6 +23,21 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
     const timerRef = useRef()
 
     useEffect(() => {
+        switch (transferVisible) {
+            case true:
+                if(props.isConnected)
+                    props.holdCall()
+                break
+            case false:
+                if(props.isConnected)
+                    props.unholdCall()
+                break
+            default:
+                break
+        }
+    }, [transferVisible])
+
+    useEffect(() => {
         if(props.isConnected) {
             timerRef.current?.start()
         } else {
