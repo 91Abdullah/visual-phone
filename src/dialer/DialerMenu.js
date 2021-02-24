@@ -157,7 +157,7 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                             </Button>
                         </Col>
                         <Col span={6}>
-                            <Button disabled={!props.isConnected} onClick={() => {
+                            <Button onClick={() => {
                                 setTransferType('attended')
                                 setTransferVisible(true)
                             }} title="Conf">

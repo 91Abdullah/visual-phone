@@ -175,7 +175,7 @@ const IncomingCall = props => {
         return () => current?.reset()
     }, [props.isConnected])
 
-    if(props.incoming && props.isConnected) {
+    if((props.incoming && props.isConnected) || props.isTransferConnected) {
         return(
             <Row style={{ marginTop: 10 }}>
                 <Col>
@@ -744,7 +744,9 @@ export default class SIPModule extends Component {
             case SessionState.Terminating:
             case SessionState.Terminated:
                 this.stopRing()
-                this.cleanupMedia()
+                if(!this.state.isTransferConnected) {
+                    this.cleanupMedia()
+                }
                 this.setState({ incoming: false, isConnected: false, _session: null, isModalVisible: false })
                 this.props.setConnected(false)
                 this.props.setCallHangup(true)
