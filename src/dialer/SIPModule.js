@@ -67,10 +67,6 @@ export const TransferModal = props => {
 
     const [transferNumber, setTransferNumber] = useState()
 
-    useEffect(() => {
-        console.log(props)
-    }, [props])
-
     const initiateTransfer = () => {
         if(transferNumber.length === 0) return
         if(props.transferType === 'blind') props.toggleBlindTransfer(transferNumber)
@@ -535,8 +531,8 @@ export default class SIPModule extends Component {
                 case SessionState.Terminating:
                 case SessionState.Terminated:
                     this.setState({ isTransferConnected: false, _transferSession: null })
-                    this.mediaElement.current.srcObject = null
-                    this.mediaElement.current.pause()
+                    //this.mediaElement.current.srcObject = null
+                    //this.mediaElement.current.pause()
                     break
                 default:
                     throw new Error("Unknown session state.")
