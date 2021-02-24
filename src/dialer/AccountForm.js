@@ -1,5 +1,6 @@
-import { Form, Input, Button } from 'antd'
+import {Form, Input, Button, Checkbox, Switch} from 'antd'
 import  { useEffect } from "react"
+import { useStorageState } from 'react-storage-hooks'
 
 const AccountForm = props => {
 
@@ -9,54 +10,19 @@ const AccountForm = props => {
         console.log(values)
     }
 
-    useEffect(() => form.resetFields(), [props])
-
     return (
-        <Form form={form} name="nest-messages" onFinish={onFinish} initialValues={{ username: props.authUser, password: props.authPass, domain: props.sipDomain, name: props.name }}>
-            <Form.Item
-                name="name"
-                rules={[
-                    {
-                        required: true,
-                    },
-                ]}
-            >
-                <Input placeholder="Name" />
+        <Form form={form} name="nest-messages" onFinish={onFinish} initialValues={{ queueStats: props.queueStats, agentStats: props.agentStats, enableCdr: props.cdrStats, enableAa: props.aaStats }}>
+            <Form.Item name="queueStats" label="Enable Q-Stats" valuePropName="checked">
+                <Switch onChange={() => props.setQueueStats(!props.queueStats)} />
             </Form.Item>
-            <Form.Item
-                name="username"
-                rules={[
-                    {
-                        required: true,
-                    },
-                ]}
-            >
-                <Input placeholder="Username" />
+            <Form.Item name="agentStats" label="Enable Agent-Stats" valuePropName="checked">
+                <Switch onChange={() => props.setAgentStats(!props.agentStats)} />
             </Form.Item>
-            <Form.Item
-                name="password"
-                rules={[
-                    {
-                        required: true,
-                    },
-                ]}
-            >
-                <Input placeholder="Password" />
+            <Form.Item name="enableCdr" label="Enable CDRs" valuePropName="checked">
+                <Switch onChange={() => props.setCdrStats(!props.cdrStats)} />
             </Form.Item>
-            <Form.Item
-                name="domain"
-                rules={[
-                    {
-                        required: true,
-                    },
-                ]}
-            >
-                <Input placeholder="Domain" />
-            </Form.Item>
-            <Form.Item>
-                <Button block type="primary" htmlType="submit">
-                    Save
-                </Button>
+            <Form.Item name="enableAa" label="Enable Auto-answer" valuePropName="checked">
+                <Switch onChange={() => props.setAaStats(!props.aaStats)} />
             </Form.Item>
         </Form>
     );

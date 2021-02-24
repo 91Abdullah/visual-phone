@@ -1,6 +1,6 @@
 import DialerMenu from "../dialer/DialerMenu";
-import {Button, Layout, Menu} from "antd";
-import {useState, useRef, useEffect} from "react"
+import {Button, Col, Layout, Menu, Row, Spin} from "antd";
+import React, {useState, useRef, useEffect} from "react"
 import {
     CheckCircleOutlined, CloseCircleOutlined,
     ClusterOutlined,
@@ -11,14 +11,88 @@ import DialerAccount from "../dialer/DialerAccount";
 import DialerConfig from "../dialer/DialerConfig";
 import SIPModule from "./SIPModule";
 import {login} from "../config/routes";
-import {useQuery, useQueryClient} from "react-query";
-import {fetchIsReady, fetchLoginQueue, fetchLogoutQueue, fetchNotReadyQueue, fetchReadyQueue} from "../config/queries";
+import {useMutation, useQuery, useQueryClient} from "react-query";
+import {
+    fetchACDRs,
+    fetchAStats, fetchChannelId,
+    fetchIsReady,
+    fetchLoginQueue,
+    fetchLogoutQueue,
+    fetchNotReadyQueue, fetchPauseReasons,
+    fetchQStats,
+    fetchReadyQueue, fetchWorkcodes
+} from "../config/queries";
 import openSuccessNotificationWithIcon from "../components/Message";
 import openNotificationWithIcon from "../components/Notification";
+import Widget from "../components/Widget";
+import CallDetailWidget from "../components/CallDetailWidget";
+import {useStorageState} from "react-storage-hooks"
+import Workcode from "../components/Workcode";
+import {postNotReady, postWorkcode} from "../config/mutations";
+import NotReady from "../components/NotReady";
 
 export default function DialerLayout(props) {
 
     const queryClient = useQueryClient()
+
+    const [queueStats, setQueueStats, writeErrorQueue] = useStorageState(localStorage, 'queue-stats', false)
+    const [agentStats, setAgentStats, writeErrorAgent] = useStorageState(localStorage, 'agent-stats', false)
+    const [cdrStats, setCdrStats, writeErrorCdr] = useStorageState(localStorage, 'cdr-stats', false)
+    const [aaStats, setAaStats, writeErrorAa] = useStorageState(localStorage, 'aa-stats', false)
+    
+    // State vars
+    const [connected, setConnected] = useState(false)
+    const [callHangup, setCallHangup] = useState(false)
+    const [channelId, setChannelId] = useState(false)
+    const [notReadyVisible, setNotReadyVisible] = useState(false)
+    const [notReadyReason, setNotReadyReason] = useState(false)
+
+    const settingsProps = {
+        queueStats,
+        setQueueStats,
+        agentStats,
+        setAgentStats,
+        cdrStats,
+        setCdrStats,
+        aaStats,
+        setAaStats
+    }
+
+    // Mutatations
+    const notReadyMutation = useMutation(postNotReady, {
+        onSuccess: (r, variables) => {
+            setNotReadyVisible(false)
+            queryClient.invalidateQueries('isReadyQuery').catch(e => console.log(e))
+            queryClient.invalidateQueries('aStats').catch(e => console.log(e))
+            switch (r.data.response) {
+                case "Success":
+                    openSuccessNotificationWithIcon(r.data.message)
+                    break
+                case "Error":
+                    openNotificationWithIcon(r.data.message)
+                    break
+                default:
+                    break
+            }
+        },
+        onError: (error, variables) => {
+            console.log(error)
+        }
+    })
+
+    const qStatsQuery = useQuery('qStats', fetchQStats)
+    const aStatsQuery = useQuery('aStats', fetchAStats)
+    const aCDRQuery = useQuery('aCDR', fetchACDRs)
+    const workcodeQuery = useQuery('workCode', fetchWorkcodes)
+    const pauseReasonQuery = useQuery('pauseReason', fetchPauseReasons)
+
+    const getChannelIdQuery = useQuery('getChannelId', fetchChannelId, {
+        retry: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        refetchOnWindowFocus: false,
+        enabled: false
+    })
 
     const loginQueueQuery = useQuery('loginQueue', fetchLoginQueue, {
         retry: false,
@@ -51,11 +125,17 @@ export default function DialerLayout(props) {
     const isReadyQuery = useQuery('isReadyQuery', fetchIsReady)
     const [dialerVisible, setDialerVisible] = useState(false)
     const [dialerAccountVisible, setDialerAccountVisible] = useState(false)
-    const sipModule = useRef()
+    let sipModule = null
 
     useEffect(() => {
         console.log(isReadyQuery.data)
     }, [isReadyQuery.data])
+
+    useEffect(() => {
+        if(connected) {
+            getChannelIdQuery.refetch().then(r => setChannelId(r.data))
+        }
+    }, [connected])
 
     const showDialerDrawer = () => {
         setDialerVisible(true)
@@ -74,11 +154,19 @@ export default function DialerLayout(props) {
     }
 
     const registerSIP = () => {
-        sipModule.current.RegisterSIP()
+        sipModule.RegisterSIP()
     }
 
     const unregisterSIP = () => {
-        sipModule.current.UnregisterSIP()
+        sipModule.UnregisterSIP()
+    }
+
+    const refreshQStats = () => {
+        queryClient.invalidateQueries('qStats')
+    }
+
+    const refreshAStats = () => {
+        queryClient.invalidateQueries('aStats')
     }
 
     /**
@@ -142,8 +230,13 @@ export default function DialerLayout(props) {
      * Pause agent
      */
     const notReadyAgent = () => {
+        setNotReadyVisible(true)
+    }
+
+    const submitNotReady = () => {
+        notReadyMutation.mutate({ reason: notReadyReason })
         // Not Ready agent
-        notReadyQueueQuery.refetch().then(r => {
+        /*notReadyMutation.mutate   ({ reason: notReadyReason }).then(r => {
             switch (r.data.response) {
                 case "Success":
                     openSuccessNotificationWithIcon(r.data.message)
@@ -154,7 +247,11 @@ export default function DialerLayout(props) {
                 default:
                     break
             }
-        }).then(() => queryClient.invalidateQueries('isReadyQuery')).catch(e => console.log(e))
+        }).then(() => queryClient.invalidateQueries('isReadyQuery')).catch(e => console.log(e))*/
+    }
+
+    const submitWorkcode = workcode => {
+        //mutation.mutate({ code: workcode, channel: channelId })
     }
 
     return(
@@ -197,7 +294,7 @@ export default function DialerLayout(props) {
                 margin: '24px 16px',
             }}>
                 <SIPModule
-                    ref={sipModule}
+                    ref={elem => sipModule = elem}
                     name={props.name}
                     sipDomain={props.sipDomain}
                     authUser={props.authUser}
@@ -208,7 +305,27 @@ export default function DialerLayout(props) {
                     onDialerAccountClose={onDialerAccountClose}
                     dialerAccountVisible={dialerAccountVisible}
                     queues={props.queues}
+                    setConnected={setConnected}
+                    setCallHangup={setCallHangup}
                 />
+                <Workcode submitWorkcode={submitWorkcode} setCallHangup={setCallHangup} callHangup={callHangup} data={workcodeQuery.data} />
+                <NotReady setNotReadyReason={setNotReadyReason} onOk={submitNotReady} onCancel={() => setNotReadyVisible(false)} visible={notReadyVisible} data={pauseReasonQuery.data} />
+                <DialerAccount onClose={onDialerAccountClose} visible={dialerAccountVisible} {...settingsProps} />
+                <Row>
+                    {queueStats && <Col span={12}>
+                        <Spin spinning={qStatsQuery.isLoading}>
+                            <Widget reload={refreshQStats} data={qStatsQuery.data} title="Queue-stats"/>
+                        </Spin>
+                    </Col>}
+                    {agentStats && <Col span={12}>
+                        <Spin spinning={aStatsQuery.isLoading}>
+                            <Widget reload={refreshAStats} data={aStatsQuery.data} title="Agent-stats"/>
+                        </Spin>
+                    </Col>}
+                    {cdrStats && <Col span={24}>
+                        <CallDetailWidget loading={aCDRQuery.isLoading} data={aCDRQuery.data}/>
+                    </Col>}
+                </Row>
             </Layout.Content>
         </Layout>
     )

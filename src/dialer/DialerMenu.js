@@ -24,7 +24,7 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
 
     useEffect(() => {
         if(props.isConnected) {
-            timerRef.current.start()
+            timerRef.current?.start()
         } else {
             timerRef.current?.reset()
         }
@@ -86,13 +86,13 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                 onClose={onClose}
                 visible={visible}
             >
-                <div style={{ marginBottom: 10 }}>
+                <div style={{ marginBottom: 8 }}>
                     {/*<Badge status={props.isConnected ? 'success' : 'error'} text={<b style={{ textDecoration: 'underline', color: props.isConnected ? 'green' : 'red' }}>{props.isConnected ? 'connected' : 'disconnected'}</b>} />*/}
-                    <Tag color={props.isConnected ? 'green' : 'red'}>{props.isConnected ? 'connected' : 'disconnected'}</Tag>
+
                 </div>
                 <div
                     style={{
-                        marginBottom: 10,
+                        marginBottom: 8,
                         border: '1px solid #ccc'
                     }}
                 >
@@ -127,9 +127,12 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
                 </div>
                 <Divider />*/}
                 <div>
-                    <Row justify="end" gutter={[16, 16]}>
+                    <Row justify="space-between" gutter={[10, 10]}>
                         <Col>
-                            <Button onClick={removeDigits} type="dashed">
+                            <Tag color={props.isConnected ? 'green' : 'red'}>{props.isConnected ? 'CONNECTED' : 'DISCONNECTED'}</Tag>
+                        </Col>
+                        <Col>
+                            <Button size="small" onClick={removeDigits} type="dashed">
                                 <LeftSquareOutlined />
                             </Button>
                         </Col>

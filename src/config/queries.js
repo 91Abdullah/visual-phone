@@ -1,5 +1,18 @@
 import apiClient from "./apiClient";
-import {cookie, domain, getQueue, getUser, isReady, loginQueue, logoutQueue, notReadyAgent, readyAgent} from "./routes";
+import {
+    aCDRs,
+    aStats,
+    cookie,
+    domain, getChannelId, getPauseReasons,
+    getQueue,
+    getUser, getWorkcodes,
+    isReady,
+    loginQueue,
+    logoutQueue,
+    notReadyAgent,
+    qStats,
+    readyAgent
+} from "./routes";
 import axios from "axios";
 
 export const fetchDomain = () => {
@@ -32,4 +45,28 @@ export const fetchNotReadyQueue = () => {
 
 export const fetchIsReady = () => {
     return apiClient.get(cookie).then(() => apiClient.post(isReady)).then(res => res.data)
+}
+
+export const fetchQStats = () => {
+    return apiClient.get(cookie).then(() => apiClient.post(qStats)).then(res => res.data)
+}
+
+export const fetchAStats = () => {
+    return apiClient.get(cookie).then(() => apiClient.post(aStats)).then(res => res.data)
+}
+
+export const fetchACDRs = () => {
+    return apiClient.get(cookie).then(() => apiClient.post(aCDRs)).then(res => res.data)
+}
+
+export const fetchWorkcodes = () => {
+    return apiClient.get(cookie).then(() => apiClient.get(getWorkcodes)).then(res => res.data)
+}
+
+export const fetchChannelId = () => {
+    return apiClient.get(cookie).then(() => apiClient.post(getChannelId).then(res => res.data))
+}
+
+export const fetchPauseReasons = () => {
+    return apiClient.get(cookie).then(() => apiClient.get(getPauseReasons).then(res => res.data))
 }

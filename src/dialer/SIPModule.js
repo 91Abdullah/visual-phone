@@ -67,6 +67,10 @@ export const TransferModal = props => {
 
     const [transferNumber, setTransferNumber] = useState()
 
+    useEffect(() => {
+        console.log(props)
+    }, [props])
+
     const initiateTransfer = () => {
         if(transferNumber.length === 0) return
         if(props.transferType === 'blind') props.toggleBlindTransfer(transferNumber)
@@ -224,6 +228,16 @@ const IncomingCall = props => {
                         toggleAttendedTransfer={toggleAttendedTransfer}
                         visible={visible}
                         onCancel={onCancel}
+                        onAcceptTransfer={props.onAcceptTransfer}
+                        isConnected={props.isTransferConnected}
+                        isHold={props.isTransferHold}
+                        isMute={props.isTransferMute}
+                        onHold={props.onTransferHold}
+                        onUnhold={props.onTransferUnhold}
+                        onMute={props.onTransferMute}
+                        onUnmute={props.onTransferUnmute}
+                        onTransferHangup={props.onTransferHangup}
+                        isBridged={props.isBridged}
                     />
                 </Col>
             </Row>
@@ -321,7 +335,7 @@ export default class SIPModule extends Component {
             this.setState({ registerer: new Registerer(this.state.userAgent)})
         })
         this.mediaElement = createRef()
-        this.audioElement = createRef()
+        this.audioElement = null
     }
 
     componentDidMount() {
@@ -334,12 +348,12 @@ export default class SIPModule extends Component {
     }
 
     playRinger() {
-        this.audioElement.current.play()
+        this.audioElement?.play()
     }
 
     stopRing() {
-        this.audioElement.current.pause()
-        this.audioElement.current.currentTime = 0
+        this.audioElement.pause()
+        this.audioElement.currentTime = 0
     }
 
     onInvite(invitation) {
@@ -459,17 +473,17 @@ export default class SIPModule extends Component {
                     // An unestablished incoming session
                     this.state._transferredSession.reject()
                 }
-                this.setState({ _transferredSession: null })
+                this.state._transferredSession.stateChange.removeListener(this.sessionListener)
+                this.setState({ _transferredSession: null, isTransferMute: false, isTransferHold: false, isTransferConnected: false, isBridged: false })
                 break
             case SessionState.Established:
                 // An established session
                 this.state._transferredSession.bye()
-                this.setState({ _transferredSession: null })
+                this.state._transferredSession.stateChange.removeListener(this.sessionListener)
+                this.setState({ _transferredSession: null, isTransferMute: false, isTransferHold: false, isTransferConnected: false, isBridged: false })
                 break
             case SessionState.Terminating:
             case SessionState.Terminated:
-                this.state._transferredSession.stateChange.removeListener(this.sessionListener)
-                this.setState({ _transferredSession: null, isTransferMute: false, isTransferHold: false, isTransferConnected: false, isBridged: false })
                 break
             default:
                 // Cannot terminate a session that is already terminated
@@ -728,6 +742,7 @@ export default class SIPModule extends Component {
                 this.stopRing()
                 this.attachMedia()
                 this.setState({ isConnected: true })
+                this.props.setConnected(true)
                 //this.setState({ _session: null, isModalVisible: false })
                 break
             case SessionState.Terminating:
@@ -735,6 +750,8 @@ export default class SIPModule extends Component {
                 this.stopRing()
                 this.cleanupMedia()
                 this.setState({ incoming: false, isConnected: false, _session: null, isModalVisible: false })
+                this.props.setConnected(false)
+                this.props.setCallHangup(true)
                 break
             default:
                 throw new Error("Unknown session state.")
@@ -915,7 +932,7 @@ export default class SIPModule extends Component {
                         }
                     </Typography>
                     <audio ref={this.mediaElement} />
-                    <audio ref={this.audioElement} src={ring} loop={true} />
+                    <audio ref={e => this.audioElement = e} src={ring} loop={true} />
                 </Card>
                 <IncomingCall
                     isHold={this.state.isHold}
@@ -930,6 +947,17 @@ export default class SIPModule extends Component {
                     incoming={this.state.incoming}
                     blindTransfer={this.onBlindTransfer}
                     attendedTransfer={this.onAttendedTransfer}
+                    onAcceptTransfer={this.onAcceptTransfer}
+                    sessionState={this.state.sessionState}
+                    isTransferMute={this.state.isTransferMute}
+                    isTransferHold={this.state.isTransferHold}
+                    onTransferMute={this.onTransferMute}
+                    onTransferUnmute={this.onTransferUnmute}
+                    onTransferUnhold={this.onTransferUnhold}
+                    onTransferHold={this.onTransferHold}
+                    isTransferConnected={this.state.isTransferConnected}
+                    onTransferHangup={this.onTransferHangup}
+                    isBridged={this.state.isBridged}
                 />
                 <IncomingModal
                     number={this.state.dialedNumber}
@@ -964,7 +992,6 @@ export default class SIPModule extends Component {
                     onTransferHangup={this.onTransferHangup}
                     isBridged={this.state.isBridged}
                 />
-                <DialerAccount {...this.props} onClose={this.props.onDialerAccountClose} visible={this.props.dialerAccountVisible} />
             </>
         )
     }
