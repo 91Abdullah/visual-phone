@@ -135,11 +135,11 @@ const IncomingCall = props => {
     useEffect(() => {
         switch (visible) {
             case true:
-                if(props.isConnected)
+                if(props.isConnected && !props.isBridged)
                     props.holdCall()
                 break
             case false:
-                if(props.isConnected)
+                if(props.isConnected && !props.isBridged)
                     props.unholdCall()
                 break
             default:

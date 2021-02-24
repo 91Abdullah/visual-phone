@@ -25,11 +25,11 @@ export default function DialerMenu({ visible, onClose, makeCall, ...props }) {
     useEffect(() => {
         switch (transferVisible) {
             case true:
-                if(props.isConnected)
+                if(props.isConnected && !props.isBridged)
                     props.holdCall()
                 break
             case false:
-                if(props.isConnected)
+                if(props.isConnected && !props.isBridged)
                     props.unholdCall()
                 break
             default:
