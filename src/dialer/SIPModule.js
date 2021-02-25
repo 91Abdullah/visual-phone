@@ -67,6 +67,10 @@ export const TransferModal = props => {
 
     const [transferNumber, setTransferNumber] = useState()
 
+    useEffect(() => {
+        console.log(props.isConnected)
+    }, [props.isConnected])
+
     const initiateTransfer = () => {
         if(transferNumber.length === 0) return
         if(props.transferType === 'blind') props.toggleBlindTransfer(transferNumber)
@@ -116,7 +120,10 @@ export const TransferModal = props => {
                 <Button onClick={props.onAcceptTransfer} disabled={!props.isConnected}>
                     <PhoneOutlined /> Bridge Call(s)
                 </Button>
-                <Button onClick={props.onTransferHangup} disabled={!props.isConnected} type="primary">
+                <Button onClick={() => {
+                    props.onTransferHangup()
+                    props.setVisible(false)
+                }} disabled={!props.isConnected} type="primary">
                     <StopOutlined /> Hangup
                 </Button>
             </div>
@@ -249,6 +256,7 @@ const IncomingCall = props => {
                         onUnmute={props.onTransferUnmute}
                         onTransferHangup={props.onTransferHangup}
                         isBridged={props.isBridged}
+                        setVisible={setVisible}
                     />
                 </Col>
             </Row>
