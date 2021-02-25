@@ -19,7 +19,7 @@ import {
     SwapOutlined,
     UserOutlined
 } from "@ant-design/icons";
-import {Button, Card, Col, Divider, Input, Modal, Row, Space, Tag, Typography} from "antd";
+import {Button, Card, Col, Descriptions, Divider, Input, Modal, Row, Space, Tag, Typography} from "antd";
 import {Inviter, Registerer, RegistererState, SessionState, TransportState, UserAgent, Web} from "sip.js";
 import openNotificationWithIcon from "../components/Notification";
 import DialerMenu from "./DialerMenu";

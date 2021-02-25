@@ -3,7 +3,7 @@ import {
     aCDRs,
     aStats,
     cookie,
-    domain, getChannelId, getPauseReasons,
+    domain, getAgentStatusInQueue, getChannelId, getPauseReasons,
     getQueue,
     getUser, getWorkcodes,
     isReady,
@@ -69,4 +69,8 @@ export const fetchChannelId = () => {
 
 export const fetchPauseReasons = () => {
     return apiClient.get(cookie).then(() => apiClient.get(getPauseReasons).then(res => res.data))
+}
+
+export const fetchAgentStatusInQueue = () => {
+    return apiClient.get(cookie).then(() => apiClient.post(getAgentStatusInQueue)).then(res => res.data)
 }

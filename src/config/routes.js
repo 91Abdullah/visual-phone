@@ -15,6 +15,7 @@ export const qStats = '/api/agent/queue-stats'
 export const aStats = '/api/agent/agent-stats'
 export const aCDRs = '/api/agent/agent-cdr'
 export const getChannelId = '/api/agent/channel'
+export const getAgentStatusInQueue = '/api/agent/agent-status'
 
 // Workcode fetch
 export const getWorkcodes = '/api/workCode'

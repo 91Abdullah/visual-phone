@@ -1,5 +1,5 @@
 import DialerMenu from "../dialer/DialerMenu";
-import {Button, Col, Layout, Menu, Row, Spin} from "antd";
+import {Button, Card, Col, Descriptions, Layout, Menu, Row, Spin} from "antd";
 import React, {useState, useRef, useEffect} from "react"
 import {
     CheckCircleOutlined, CloseCircleOutlined,
@@ -13,7 +13,7 @@ import SIPModule from "./SIPModule";
 import {login} from "../config/routes";
 import {useMutation, useQuery, useQueryClient} from "react-query";
 import {
-    fetchACDRs,
+    fetchACDRs, fetchAgentStatusInQueue,
     fetchAStats, fetchChannelId,
     fetchIsReady,
     fetchLoginQueue,
@@ -30,6 +30,7 @@ import {useStorageState} from "react-storage-hooks"
 import Workcode from "../components/Workcode";
 import {postNotReady, postWorkcode} from "../config/mutations";
 import NotReady from "../components/NotReady";
+import AgentStatusWidget from "../components/AgentStatusWidget";
 
 export default function DialerLayout(props) {
 
@@ -85,6 +86,7 @@ export default function DialerLayout(props) {
     const aCDRQuery = useQuery('aCDR', fetchACDRs)
     const workcodeQuery = useQuery('workCode', fetchWorkcodes)
     const pauseReasonQuery = useQuery('pauseReason', fetchPauseReasons)
+    const agentStatusInQueue = useQuery('agentStatusInQueue', fetchAgentStatusInQueue)
 
     const getChannelIdQuery = useQuery('getChannelId', fetchChannelId, {
         retry: false,
@@ -185,7 +187,7 @@ export default function DialerLayout(props) {
                 default:
                     break
             }
-        }).catch(e => console.log(e))
+        }).then(() => queryClient.invalidateQueries('agentStatusInQueue')).catch(e => console.log(e))
     }
 
     /**
@@ -204,7 +206,7 @@ export default function DialerLayout(props) {
                 default:
                     break
             }
-        }).catch(e => console.log(e))
+        }).then(() => queryClient.invalidateQueries('agentStatusInQueue')).catch(e => console.log(e))
     }
 
     /**
@@ -308,6 +310,7 @@ export default function DialerLayout(props) {
                     setConnected={setConnected}
                     setCallHangup={setCallHangup}
                 />
+                <AgentStatusWidget isLogin={agentStatusInQueue.data} isReady={isReadyQuery.data} reason={aStatsQuery.data?.Pausedreason} />
                 <Workcode submitWorkcode={submitWorkcode} setCallHangup={setCallHangup} callHangup={callHangup} data={workcodeQuery.data} />
                 <NotReady setNotReadyReason={setNotReadyReason} onOk={submitNotReady} onCancel={() => setNotReadyVisible(false)} visible={notReadyVisible} data={pauseReasonQuery.data} />
                 <DialerAccount onClose={onDialerAccountClose} visible={dialerAccountVisible} {...settingsProps} />
