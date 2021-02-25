@@ -605,7 +605,10 @@ export default class SIPModule extends Component {
 
             session.sessionDescriptionHandler.peerConnection.getSenders()[0].replaceTrack(mixedOutput.stream.getTracks()[0])
                 .then(r => {
-                    this.setState({ isBridged: true })
+                    this.setState({ isBridged: true }, () => {
+                        if(this.state.isHold)
+                            this.onUnhold()
+                    })
                     console.log('track replaced')
                 })
                 .catch(e => console.log(`error: ${e}`))
