@@ -856,7 +856,8 @@ export default class SIPModule extends Component {
 
         const options = {
             sessionDescriptionHandlerOptions: {
-                constraints
+                constraints,
+                iceGatheringTimeout: 100
             }
         }
         inviter.invite(options).then(res => console.log(res)).catch(error => this.setError(error.message))
@@ -902,7 +903,8 @@ export default class SIPModule extends Component {
 
         const options = {
             sessionDescriptionHandlerOptions: {
-                constraints
+                constraints,
+                iceGatheringTimeout: 100
             }
         }
 
