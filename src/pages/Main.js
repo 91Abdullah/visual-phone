@@ -93,7 +93,7 @@ function Main(props) {
                         </Switch>
                     </div>
                 </Layout.Content>
-                <Layout.Footer style={{ textAlign: 'center', backgroundColor: '#FFF', fontWeight: 'bold' }}>ContactPlus ©2020 | Powered by Telecard Ltd.</Layout.Footer>
+                <Layout.Footer style={{ textAlign: 'center', backgroundColor: '#FFF', fontWeight: 'bold' }}>ContactPlus ©2021 | Powered by Telecard Ltd.</Layout.Footer>
             </Layout>
         </Spin>
     )
