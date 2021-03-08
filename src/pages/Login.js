@@ -8,9 +8,6 @@ import { useState, useEffect } from "react"
 import {useHistory} from "react-router-dom";
 
 const layout = {
-    labelCol: {
-        span: 8,
-    },
     wrapperCol: {
         span: 8,
         offset: 8
@@ -134,7 +131,7 @@ export default function Login(props) {
                     <Input.Password prefix={<LockOutlined />} placeholder="Password" />
                 </Form.Item>
 
-                <Form.Item {...tailLayout} name="remember" valuePropName="checked">
+                <Form.Item name="remember" valuePropName="checked">
                     <Checkbox>Remember me</Checkbox>
                 </Form.Item>
 
