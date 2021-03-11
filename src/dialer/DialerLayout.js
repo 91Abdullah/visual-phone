@@ -81,12 +81,33 @@ export default function DialerLayout(props) {
         }
     })
 
-    const qStatsQuery = useQuery('qStats', fetchQStats)
-    const aStatsQuery = useQuery('aStats', fetchAStats)
-    const aCDRQuery = useQuery('aCDR', fetchACDRs)
-    const workcodeQuery = useQuery('workCode', fetchWorkcodes)
-    const pauseReasonQuery = useQuery('pauseReason', fetchPauseReasons)
-    const agentStatusInQueue = useQuery('agentStatusInQueue', fetchAgentStatusInQueue)
+    const options = {
+        refetchOnReconnect: false,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false
+    }
+
+    const qStatsQuery = useQuery('qStats', fetchQStats, {
+        refetchOnReconnect: false,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        enabled: queueStats
+    })
+    const aStatsQuery = useQuery('aStats', fetchAStats, {
+        refetchOnReconnect: false,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        enabled: agentStats
+    })
+    const aCDRQuery = useQuery('aCDR', fetchACDRs, {
+        refetchOnReconnect: false,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        enabled: cdrStats
+    })
+    const workcodeQuery = useQuery('workCode', fetchWorkcodes, options)
+    const pauseReasonQuery = useQuery('pauseReason', fetchPauseReasons, options)
+    const agentStatusInQueue = useQuery('agentStatusInQueue', fetchAgentStatusInQueue, options)
 
     const getChannelIdQuery = useQuery('getChannelId', fetchChannelId, {
         retry: false,
@@ -124,7 +145,7 @@ export default function DialerLayout(props) {
         refetchOnWindowFocus: false,
         enabled: false
     })
-    const isReadyQuery = useQuery('isReadyQuery', fetchIsReady)
+    const isReadyQuery = useQuery('isReadyQuery', fetchIsReady, options)
     const [dialerVisible, setDialerVisible] = useState(false)
     const [dialerAccountVisible, setDialerAccountVisible] = useState(false)
     let sipModule = null

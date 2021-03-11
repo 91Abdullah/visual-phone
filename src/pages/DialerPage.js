@@ -11,9 +11,14 @@ import { useEffect } from "react"
 
 const DialerPage = () => {
 
-    const domainQuery = useQuery('fetchDomain', fetchDomain)
-    const userQuery = useQuery('fetchUser', fetchUser)
-    const queueQuery = useQuery('fetchQueue', fetchQueue)
+    const options = {
+        refetchInterval: false,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false
+    }
+    const domainQuery = useQuery('fetchDomain', fetchDomain, options)
+    const userQuery = useQuery('fetchUser', fetchUser, options)
+    const queueQuery = useQuery('fetchQueue', fetchQueue, options)
 
     if(userQuery.isSuccess && userQuery.data.type === "Normal") {
         return (
@@ -34,7 +39,7 @@ const DialerPage = () => {
                     extra={<Button onClick={() => window.location.reload()} type="primary">Refresh Page</Button>}
                 />
             )
-        } else {
+        } else if(domainQuery.isError) {
             return (
                 <Result
                     status={domainQuery.error.status}

@@ -1,4 +1,4 @@
-import {Button, Layout, Menu, Spin} from "antd";
+import {Button, Layout, Spin} from "antd";
 import { useState, useEffect } from "react"
 import logo from './../bykea.png';
 import Login from "./Login"
@@ -6,17 +6,14 @@ import {
     useHistory,
     Switch,
     Route,
-    Link
 } from "react-router-dom"
-import Dialer from "./Dialer";
 import {LogoutOutlined} from "@ant-design/icons";
 import apiClient from "../config/apiClient";
 import {cookie, logout} from "../config/routes";
 import openNotificationWithIcon from "../components/Notification";
 import ErrorBoundary from "./ErrorBoundary";
-import DialerWrapper from "./DialerWrapper";
 import DialerPage from "./DialerPage";
-function Main(props) {
+function Main() {
 
     const [loggedin, setLoggedin] = useState(localStorage.getItem('loggedin') === "true")
     const [error, setError] = useState(false)
