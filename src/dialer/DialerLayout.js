@@ -76,9 +76,7 @@ export default function DialerLayout(props) {
                     break
             }
         },
-        onError: (error, variables) => {
-            console.log(error)
-        }
+        onError: (error, variables) => openNotificationWithIcon(error?.response?.data)
     })
 
     const options = {
@@ -151,10 +149,6 @@ export default function DialerLayout(props) {
     let sipModule = null
 
     useEffect(() => {
-        console.log(isReadyQuery.data)
-    }, [isReadyQuery.data])
-
-    useEffect(() => {
         if(connected) {
             getChannelIdQuery.refetch().then(r => setChannelId(r.data))
         }
@@ -198,15 +192,19 @@ export default function DialerLayout(props) {
     const loginQueue = () => {
         // Login queue
         loginQueueQuery.refetch().then(r => {
-            switch (r.data.response) {
-                case "Success":
-                    openSuccessNotificationWithIcon(r.data.message)
-                    break
-                case "Error":
-                    openNotificationWithIcon(r.data.message)
-                    break
-                default:
-                    break
+            if(r.isError) {
+                openNotificationWithIcon(r.error?.response?.data)
+            } else {
+                switch (r.data.response) {
+                    case "Success":
+                        openSuccessNotificationWithIcon(r.data.message)
+                        break
+                    case "Error":
+                        openNotificationWithIcon(r.data.message)
+                        break
+                    default:
+                        break
+                }
             }
         }).then(() => queryClient.invalidateQueries('agentStatusInQueue')).catch(e => console.log(e))
     }
@@ -217,15 +215,19 @@ export default function DialerLayout(props) {
     const logoutQueue = () => {
         // Logout queue
         logoutQueueQuery.refetch().then(r => {
-            switch (r.data.response) {
-                case "Success":
-                    openSuccessNotificationWithIcon(r.data.message)
-                    break
-                case "Error":
-                    openNotificationWithIcon(r.data.message)
-                    break
-                default:
-                    break
+            if(r.isError) {
+                openNotificationWithIcon(r.error?.response?.data)
+            } else {
+                switch (r.data.response) {
+                    case "Success":
+                        openSuccessNotificationWithIcon(r.data.message)
+                        break
+                    case "Error":
+                        openNotificationWithIcon(r.data.message)
+                        break
+                    default:
+                        break
+                }
             }
         }).then(() => queryClient.invalidateQueries('agentStatusInQueue')).catch(e => console.log(e))
     }
@@ -236,15 +238,19 @@ export default function DialerLayout(props) {
     const readyAgent = () => {
         // Ready agent
         readyQueueQuery.refetch().then(r => {
-            switch (r.data.response) {
-                case "Success":
-                    openSuccessNotificationWithIcon(r.data.message)
-                    break
-                case "Error":
-                    openNotificationWithIcon(r.data.message)
-                    break
-                default:
-                    break
+            if(r.isError) {
+                openNotificationWithIcon(r.error?.response?.data)
+            } else {
+                switch (r.data.response) {
+                    case "Success":
+                        openSuccessNotificationWithIcon(r.data.message)
+                        break
+                    case "Error":
+                        openNotificationWithIcon(r.data.message)
+                        break
+                    default:
+                        break
+                }
             }
         }).then(() => queryClient.invalidateQueries('isReadyQuery')).catch(e => console.log(e))
     }

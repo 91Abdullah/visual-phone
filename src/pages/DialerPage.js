@@ -1,24 +1,27 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import {useQuery} from "react-query";
 import {fetchDomain, fetchQueue, fetchUser} from "../config/queries";
 import {Button, Col, Result, Row, Skeleton, Spin} from "antd";
 import {LogoutOutlined} from "@ant-design/icons";
-import SIPConfig from "../classes/SIPConfig";
-import SIPModule from "../dialer/SIPModule";
 import DialerLayout from "../dialer/DialerLayout";
-import DialerMenu from "../dialer/DialerMenu"
-import { useEffect } from "react"
 
 const DialerPage = () => {
 
     const options = {
         refetchInterval: false,
         refetchOnMount: false,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        retry: false
     }
     const domainQuery = useQuery('fetchDomain', fetchDomain, options)
     const userQuery = useQuery('fetchUser', fetchUser, options)
     const queueQuery = useQuery('fetchQueue', fetchQueue, options)
+
+    const [baseUrl, setBaseUrl] = useState(`${process.env.REACT_APP_baseURL}` || 'https://localhost')
+
+    const error = (
+        <div style={{ color: '#000' }}>Sorry, something went wrong. Try adding certificate: <a href={baseUrl} rel="noreferrer" target="_blank">{baseUrl}</a></div>
+    )
 
     if(userQuery.isSuccess && userQuery.data.type === "Normal") {
         return (
@@ -33,18 +36,18 @@ const DialerPage = () => {
         if(userQuery.isError) {
             return (
                 <Result
-                    status={userQuery.error.status}
-                    title={userQuery.error.status}
-                    subTitle={userQuery.error.statusText}
+                    status={userQuery.error.status ?? 500}
+                    title={userQuery.error.status ?? 500}
+                    subTitle={userQuery.error.statusText ?? error}
                     extra={<Button onClick={() => window.location.reload()} type="primary">Refresh Page</Button>}
                 />
             )
         } else if(domainQuery.isError) {
             return (
                 <Result
-                    status={domainQuery.error.status}
-                    title={domainQuery.error.status}
-                    subTitle={domainQuery.error.statusText}
+                    status={domainQuery.error.status ?? 500}
+                    title={domainQuery.error.status ?? 500}
+                    subTitle={domainQuery.error.statusText ?? error}
                     extra={<Button onClick={() => window.location.reload()} type="primary">Refresh Page</Button>}
                 />
             )

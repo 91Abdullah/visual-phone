@@ -13,7 +13,6 @@ import {
     qStats,
     readyAgent
 } from "./routes";
-import axios from "axios";
 
 export const fetchDomain = () => {
     return apiClient.get(cookie).then(() => apiClient.get(domain).then(response => response.data[0]))
