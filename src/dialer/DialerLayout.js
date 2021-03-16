@@ -79,6 +79,14 @@ export default function DialerLayout(props) {
         onError: (error, variables) => openNotificationWithIcon(error?.response?.data)
     })
 
+    const workcodeMutation = useMutation(postWorkcode, {
+        onSuccess: response => {
+            console.log(response)
+            setChannelId(null)
+        },
+        onError: error => console.log(error)
+    })
+
     const options = {
         refetchOnReconnect: false,
         refetchOnMount: false,
@@ -150,7 +158,7 @@ export default function DialerLayout(props) {
 
     useEffect(() => {
         if(connected) {
-            getChannelIdQuery.refetch().then(r => setChannelId(r.data))
+            getChannelIdQuery.refetch().then(r => setChannelId(r.data.toString()))
         }
     }, [connected])
 
@@ -280,7 +288,7 @@ export default function DialerLayout(props) {
     }
 
     const submitWorkcode = workcode => {
-        //mutation.mutate({ code: workcode, channel: channelId })
+        workcodeMutation.mutate({ code: workcode, channel: channelId })
     }
 
     return(
@@ -338,7 +346,7 @@ export default function DialerLayout(props) {
                     setCallHangup={setCallHangup}
                 />
                 <AgentStatusWidget isLogin={agentStatusInQueue.data} isReady={isReadyQuery.data} reason={aStatsQuery.data?.Pausedreason} />
-                <Workcode submitWorkcode={submitWorkcode} setCallHangup={setCallHangup} callHangup={callHangup} data={workcodeQuery.data} />
+                <Workcode submitWorkcode={submitWorkcode} channelId={channelId} setCallHangup={setCallHangup} callHangup={callHangup} data={workcodeQuery.data} />
                 <NotReady setNotReadyReason={setNotReadyReason} onOk={submitNotReady} onCancel={() => setNotReadyVisible(false)} visible={notReadyVisible} data={pauseReasonQuery.data} />
                 <DialerAccount onClose={onDialerAccountClose} visible={dialerAccountVisible} {...settingsProps} />
                 <Row>
