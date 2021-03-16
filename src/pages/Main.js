@@ -1,6 +1,6 @@
 import {Button, Layout, Spin} from "antd";
 import { useState, useEffect } from "react"
-import logo from './../bykea.png';
+import logo from './../logo4.png';
 import Login from "./Login"
 import {
     useHistory,
